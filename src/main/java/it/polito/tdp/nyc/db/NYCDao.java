@@ -6,7 +6,13 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+
+import com.javadocmd.simplelatlng.LatLng;
+
+import it.polito.tdp.nyc.model.Coppia;
 import it.polito.tdp.nyc.model.Hotspot;
+import it.polito.tdp.nyc.model.Location;
 
 public class NYCDao {
 	
@@ -36,5 +42,77 @@ public class NYCDao {
 		return result;
 	}
 	
+	public List<String> getAllProvider(){
+		String sql = "SELECT DISTINCT n.Provider "
+				+ "FROM nyc_wifi_hotspot_locations n "
+				+ "ORDER BY n.Provider";
+		List<String> result = new ArrayList<>();
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			ResultSet res = st.executeQuery();
 
+			while (res.next()) {
+				result.add(res.getString("n.Provider"));
+			}
+			
+			conn.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			throw new RuntimeException("SQL Error");
+		}
+
+		return result;
+	}
+	
+	public List<Location> getVertici(String p){
+		String sql = "SELECT DISTINCT n.Location, AVG(n.Latitude) AS lat, AVG(n.Longitude) AS lon "
+				+ "FROM nyc_wifi_hotspot_locations n "
+				+ "WHERE n.Provider=? "
+				+ "GROUP BY n.Location "
+				+ "ORDER BY n.Location";
+		List<Location> result = new ArrayList<>();
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setString(1, p);
+			ResultSet res = st.executeQuery();
+
+			while (res.next()) {
+				result.add(new Location(res.getString("n.Location"),new LatLng(res.getDouble("lat"), res.getDouble("lon"))));
+			}
+			
+			conn.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			throw new RuntimeException("SQL Error");
+		}
+
+		return result;
+	}
+	
+	public List<Coppia> getArchi(String p, Map<String,Location> vMap){
+		String sql = "SELECT DISTINCT n1.Location, n2.Location "
+				+ "FROM nyc_wifi_hotspot_locations n1, nyc_wifi_hotspot_locations n2 "
+				+ "WHERE n1.Provider=? AND n1.Provider=n2.Provider AND n1.Location>n2.Location "
+				+ "GROUP BY n1.Location, n2.Location";
+		List<Coppia> result = new ArrayList<>();
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setString(1, p);
+			ResultSet res = st.executeQuery();
+
+			while (res.next()) {
+				result.add(new Coppia(vMap.get(res.getString("n1.Location")),vMap.get(res.getString("n2.Location"))));
+			}
+			
+			conn.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			throw new RuntimeException("SQL Error");
+		}
+
+		return result;
+	}
 }
